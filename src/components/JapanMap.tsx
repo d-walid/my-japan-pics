@@ -3,18 +3,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre'
 import type { Photo } from '@/types/photo'
+import FilterPanel from '@/components/FilterPanel';
 
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const MAP_STYLE = 'https://tiles.openFreemap.org/styles/liberty'
 
-
-function formatFolder(folder: string): string {
-    return folder
-        .split('-')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ')
-}
 
 // Format the date for the popup
 function formatDate(iso: string): string {
@@ -40,7 +34,6 @@ export default function JapanMap() {
     const [photos, setPhotos] = useState<Photo[]>([])
     const [selected, setSelected] = useState<Photo | null>(null)
     const [activeFolders, setActiveFolders] = useState<Set<string>>(new Set())
-    const [isFullScreen, setIsFullScreen] = useState(false)
     const [descriptions, setDescriptions] = useState<Record<string, string>>({})
     const [isEditingDesc, setIsEditingDesc] = useState(false)
     const [descDraft, setDescDraft] = useState('')
@@ -56,17 +49,6 @@ export default function JapanMap() {
 
         fetch('/api/descriptions').then((r) => r.json()).then(setDescriptions)
     }, [])
-
-    // useEffect to toggle a fullscreen for the pin selected when you click the image
-    useEffect(() => {
-        if (!isFullScreen) return
-
-        const handleKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setIsFullScreen(false)
-        }
-        window.addEventListener('keydown', handleKey)
-        return () => window.removeEventListener('keydown', handleKey)
-    }, [isFullScreen])
 
     // Reset desc edition when the user changes the picture
     useEffect(() => {
@@ -84,6 +66,11 @@ export default function JapanMap() {
             return next
         })
     }, [])
+
+    const toggleAll = useCallback(() => {
+        const allActive = folders.every((f) => activeFolders.has(f))
+        setActiveFolders(allActive ? new Set() : new Set(folders))
+    }, [folders, activeFolders])
 
     const visiblePhotos = photos.filter((p) => activeFolders.has(p.folder))
 
@@ -108,25 +95,12 @@ export default function JapanMap() {
     return (
         <>
             {/* Filter panel - floats above the map */}
-            <div className='fixed top-4 left-4 z-10 bg-white/90 rounded-xl shadow-lg p-3 flex flex-col gap-1.5'>
-                <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'>
-                    Filter
-                </p>
-                {folders.map((folder) => (
-                    <button
-                        key={folder}
-                        onClick={() => toggleFolder(folder)}
-                        className={`text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                            activeFolders.has(folder)
-                                ? `bg-red-500 text-white`
-                                : 'bg-gray-100 text-gray-400'
-                        }`}
-                    >
-                        {formatFolder(folder)}
-                    </button>
-                ))}
-            </div>
-
+            <FilterPanel
+                folders={folders}
+                activeFolders={activeFolders}
+                onToggleFolder={toggleFolder}
+                onToggleAll={toggleAll}
+            />        
             <Map
                 initialViewState={INITIAL_VIEW}
                 style={{ width: '100%', height: '100vh'}}
@@ -148,7 +122,6 @@ export default function JapanMap() {
                                     ? 'bg-blue-600 scale-125'
                                     : 'bg-red-500'
                             }`}
-                            onMouseEnter={() => setSelected(photo)}
                             onClick={(e) => {
                                 e.stopPropagation()
                                 setSelected(photo)
@@ -163,7 +136,7 @@ export default function JapanMap() {
                         latitude={selected.lat}
                         anchor='bottom'
                         closeButton={true}
-                        onClose={() => { setSelected(null); setIsFullScreen(false) }}
+                        onClose={() => { setSelected(null); }}
                         offset={16}
                         maxWidth='500px'
                     >
@@ -199,12 +172,17 @@ export default function JapanMap() {
                                 )}
                             </div>
                             <div className='relative'>
-                                <img
-                                    src={selected.thumbPath}
-                                    alt={selected.filename}
-                                    className='w-full max-h-[420px] object-contain cursor-zoom-in'
-                                    onClick={() => setIsFullScreen(true)}
-                                />
+                                <a
+                                    href={`/api/original/${selected.folder}/${selected.filename}`}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                >
+                                    <img
+                                        src={selected.thumbPath}
+                                        alt={selected.filename}
+                                        className='w-full max-h-[420px] object-contain cursor-zoom-in'
+                                    />
+                                </a>
                                 {selected.takenAt && (
                                     <span className='absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-0.5 rounded'>
                                         {formatDate(selected.takenAt)}
@@ -215,18 +193,6 @@ export default function JapanMap() {
                     </Popup>
                 )}
             </Map>
-            {isFullScreen && selected && (
-                <div
-                    className='fixed inset-0 z-50 bg-black/90 flex items-center justify-center cursor-zoom-out'
-                    onClick={() => setIsFullScreen(false)}
-                >
-                    <img
-                        src={selected.thumbPath}
-                        alt={selected.filename}
-                        className='max-w full max-h-full object-contain'
-                    />
-                </div>
-            )}
         </>
     )
 }
