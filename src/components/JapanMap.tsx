@@ -1,25 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre'
+import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre'
 import type { Photo } from '@/types/photo'
-import FilterPanel from '@/components/FilterPanel';
+
+import FilterPanel from '@/components/FilterPanel'
+import PhotoPanel from '@/components/PhotoPanel'
+import { usePhotoNavigation } from '@/hooks/usePhotoNavigation'
 
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const MAP_STYLE = 'https://tiles.openFreemap.org/styles/liberty'
-
-
-// Format the date for the popup
-function formatDate(iso: string): string {
-    return new Date(iso).toLocaleString('fr-FR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })
-}
 
 
 // Japan initial view
@@ -35,8 +26,6 @@ export default function JapanMap() {
     const [selected, setSelected] = useState<Photo | null>(null)
     const [activeFolders, setActiveFolders] = useState<Set<string>>(new Set())
     const [descriptions, setDescriptions] = useState<Record<string, string>>({})
-    const [isEditingDesc, setIsEditingDesc] = useState(false)
-    const [descDraft, setDescDraft] = useState('')
 
     useEffect(() => {
         fetch('/api/photos')
@@ -49,12 +38,6 @@ export default function JapanMap() {
 
         fetch('/api/descriptions').then((r) => r.json()).then(setDescriptions)
     }, [])
-
-    // Reset desc edition when the user changes the picture
-    useEffect(() => {
-        setIsEditingDesc(false)
-        setDescDraft('')
-    }, [selected])
 
     const folders = [...new Set(photos.map((p) => p.folder))].sort()
 
@@ -73,23 +56,23 @@ export default function JapanMap() {
     }, [folders, activeFolders])
 
     const visiblePhotos = photos.filter((p) => activeFolders.has(p.folder))
+    usePhotoNavigation(visiblePhotos, selected, setSelected)
 
     // Save the description written in the picture
-    const saveDescription = async () => {
+    const saveDescription = async (description: string) => {
         if (!selected) return
         const key = `${selected.folder}/${selected.filename}`
         await fetch('/api/descriptions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({key, description: descDraft }),
+            body: JSON.stringify({ key, description }),
         })
         setDescriptions((prev) => {
-            const next = {...prev}
-            if (descDraft.trim() === '') delete next[key]
-            else next[key] = descDraft.trim()
+            const next = { ...prev }
+            if (description.trim() === '') delete next[key]
+            else next[key] = description.trim()
             return next
         })
-        setIsEditingDesc(false)
     }
 
     return (
@@ -100,12 +83,14 @@ export default function JapanMap() {
                 activeFolders={activeFolders}
                 onToggleFolder={toggleFolder}
                 onToggleAll={toggleAll}
-            />        
+            />
+
             <Map
                 initialViewState={INITIAL_VIEW}
-                style={{ width: '100%', height: '100vh'}}
+                style={{ width: '100%', height: '100vh' }}
                 mapStyle={MAP_STYLE}
                 onClick={() => setSelected(null)}
+                keyboard={false}
             >
                 <NavigationControl position='bottom-right' />
 
@@ -118,7 +103,7 @@ export default function JapanMap() {
                     >
                         <div
                             className={`w-3 h-3 rounded-full border-2 border-white cursor-pointer shadow-md transition-transform hover:scale-125 ${
-                                selected?.filename === photo.filename
+                                selected?.folder === photo.folder && selected?.filename === photo.filename
                                     ? 'bg-blue-600 scale-125'
                                     : 'bg-red-500'
                             }`}
@@ -129,70 +114,16 @@ export default function JapanMap() {
                         />
                     </Marker>
                 ))}
-
-                {selected && (
-                    <Popup
-                        longitude={selected.lng}
-                        latitude={selected.lat}
-                        anchor='bottom'
-                        closeButton={true}
-                        onClose={() => { setSelected(null); }}
-                        offset={16}
-                        maxWidth='500px'
-                    >
-                        <div>
-                            <div className='px-3 py-2'>
-                                {isEditingDesc ? (
-                                    <input
-                                        autoFocus
-                                        type='text'
-                                        value={descDraft}
-                                        onChange={(e) => setDescDraft(e.target.value)}
-                                        onBlur={saveDescription}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') saveDescription()
-                                            if (e.key === 'Escape') setIsEditingDesc(false)
-                                        }}
-                                        className='w-full text-sm text-black outline-none border-b border-gray-300 focus:border-gray-600'
-                                        placeholder='Add a description...'
-                                    />
-                                ) : (
-                                        <p
-                                            className='text-sm text-black cursor-text'
-                                            onClick={() => {
-                                                const key = `${selected.folder}/${selected.filename}`
-                                                setDescDraft(descriptions[key] ?? '')
-                                                setIsEditingDesc(true)
-                                            }}
-                                        >
-                                            {descriptions[`${selected.folder}/${selected.filename}`] || (
-                                                <span className='text-black italic'>Add a description...</span>
-                                            )}
-                                        </p>
-                                )}
-                            </div>
-                            <div className='relative'>
-                                <a
-                                    href={`/api/original/${selected.folder}/${selected.filename}`}
-                                    target='_blank'
-                                    rel='noopener noreferrer'
-                                >
-                                    <img
-                                        src={selected.thumbPath}
-                                        alt={selected.filename}
-                                        className='w-full max-h-[420px] object-contain cursor-zoom-in'
-                                    />
-                                </a>
-                                {selected.takenAt && (
-                                    <span className='absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-0.5 rounded'>
-                                        {formatDate(selected.takenAt)}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </Popup>
-                )}
             </Map>
+
+            {selected && (
+                <PhotoPanel
+                    photo={selected}
+                    description={descriptions[`${selected.folder}/${selected.filename}`] ?? ''}
+                    onClose={() => setSelected(null)}
+                    onSaveDescription={saveDescription}
+                />
+            )}
         </>
     )
 }
