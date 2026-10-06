@@ -36,7 +36,7 @@ export default function PhotoPanel({ photo, description, onClose, onSaveDescript
     }
 
     return (
-        <div className='fixed top-4 right-4 z-10 flex flex-col bg-white rounded-xl shadow-lg overflow-hidden max-w-[6s00px]'>
+        <div className='fixed top-4 right-4 z-10 flex flex-col bg-white rounded-xl shadow-lg overflow-hidden max-w-[600px]'>
             <div className='flex items-start justify-between px-3 py-2'>
                 {isEditingDesc ? (
                     <input
