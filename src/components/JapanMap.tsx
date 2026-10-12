@@ -58,11 +58,15 @@ export default function JapanMap() {
 
     const folders = [...new Set(photos.map((p) => p.folder))].sort()
 
-    // Toggles a folder's visibily in the filter
+    // Toggles a folder's visibility in the filter
     const toggleFolder = useCallback((folder: string) => {
         setActiveFolders((prev) => {
             const next = new Set(prev)
-            next.has(folder) ? next.delete(folder) : next.add(folder)
+            if (next.has(folder)) {
+                next.delete(folder)
+            } else {
+                next.add(folder)
+            }
             return next
         })
     }, [])
