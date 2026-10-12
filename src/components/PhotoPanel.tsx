@@ -60,10 +60,13 @@ export default function PhotoPanel({ photo, description, onClose, onSaveDescript
                             setIsEditingDesc(true)
                         }}
                     >
-                        {description || <span className='text-black italic'>Add a description...</span>}
+                        {description || <span className='text-gray-600 italic'>Add a description...</span>}
                     </p>
                 )}
-                <button onClick={onClose} className='ml-2 text-gray-400 hover:text-gray-600'>
+                <button
+                    onClick={onClose}
+                    aria-label='Close'
+                    className='ml-2 text-gray-500 hover:text-black'>
                     ✕
                 </button>
             </div>
