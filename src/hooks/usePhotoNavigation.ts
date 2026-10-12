@@ -10,7 +10,7 @@ export function usePhotoNavigation(
     const orderedPhotos = useMemo(() => {
         return [...photos].sort((a, b) => {
             if (a.takenAt && b.takenAt) return a.takenAt.localeCompare(b.takenAt)
-                return `${a.folder}/${a.filename}`.localeCompare(`${b.folder}/${b.filename}`)
+            return `${a.folder}/${a.filename}`.localeCompare(`${b.folder}/${b.filename}`)
         })
     }, [photos])
 
@@ -32,13 +32,13 @@ export function usePhotoNavigation(
 
             const index = orderedPhotos.findIndex(
                 (p) => p.folder === selected.folder && p.filename === selected.filename)
-                if (index === -1) return
+            if (index === -1) return
 
-                const nextIndex = e.key === 'ArrowRight'
-                    ? (index + 1) % orderedPhotos.length
-                    : (index - 1 + orderedPhotos.length) % orderedPhotos.length
+            const nextIndex = e.key === 'ArrowRight'
+                ? (index + 1) % orderedPhotos.length
+                : (index - 1 + orderedPhotos.length) % orderedPhotos.length
 
-                onNavigate(orderedPhotos[nextIndex])
+            onNavigate(orderedPhotos[nextIndex])
         }
 
         window.addEventListener('keydown', handleKey)
