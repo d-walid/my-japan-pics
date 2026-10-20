@@ -40,6 +40,7 @@ async function readPhoto(folder: string, filename: string): Promise<Photo | null
             taken.getTime())
 
         return {
+            kind: 'photo',
             folder,
             filename,
             thumbPath: `/thumbs/${folder}/${filename}`,
