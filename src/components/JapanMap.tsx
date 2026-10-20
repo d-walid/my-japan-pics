@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre'
-import type { Photo } from '@/types/photo'
+import type { Media } from '@/types/photo'
 
 import FilterPanel from '@/components/FilterPanel'
 import PhotoPanel from '@/components/PhotoPanel'
@@ -20,10 +20,16 @@ const INITIAL_VIEW = {
     zoom: 5.5,
 }
 
+function loadJson(url: string) {
+    return fetch(url).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+    })
+}
 
 export default function JapanMap() {
-    const [photos, setPhotos] = useState<Photo[]>([])
-    const [selected, setSelected] = useState<Photo | null>(null)
+    const [media, setMedia] = useState<Media[]>([])
+    const [selected, setSelected] = useState<Media | null>(null)
     const [activeFolders, setActiveFolders] = useState<Set<string>>(new Set())
     const [descriptions, setDescriptions] = useState<Record<string, string>>({})
     const [isLoading, setIsLoading] = useState(true)
@@ -31,14 +37,17 @@ export default function JapanMap() {
     const [saveError, setSaveError] = useState<string | null>(null)
 
     useEffect(() => {
-        fetch('/api/photos')
-            .then((r) => {
-                if (!r.ok) throw new Error(`HTTP ${r.status}`)
-                return r.json()
+        Promise.all([
+            loadJson('/api/photos'),
+            loadJson('/api/videos').catch((err) => {
+                console.error('Could not load videos', err)
+                return []
             })
-            .then((data: Photo[]) => {
-                setPhotos(data)
-                setActiveFolders(new Set(data.map((p) => p.folder)))
+        ])
+            .then(([photos, videos]: Media[][]) => {
+                const all = [...photos, ...videos]
+                setMedia(all)
+                setActiveFolders(new Set(all.map((m) => m.folder)))
             })
             .catch((err) => {
                 console.error('Could not load photos', err)
@@ -56,7 +65,9 @@ export default function JapanMap() {
             .catch((err) => console.error('Could not load descriptions', err))
     }, [])
 
-    const folders = [...new Set(photos.map((p) => p.folder))].sort()
+    const folders = [...new Set(media.map((p) => p.folder))].sort()
+    const visibleMedia = media.filter((m) => activeFolders.has(m.folder))
+    usePhotoNavigation(visibleMedia, selected, setSelected)
 
     // Toggles a folder's visibility in the filter
     const toggleFolder = useCallback((folder: string) => {
@@ -75,9 +86,6 @@ export default function JapanMap() {
         const allActive = folders.every((f) => activeFolders.has(f))
         setActiveFolders(allActive ? new Set() : new Set(folders))
     }, [folders, activeFolders])
-
-    const visiblePhotos = photos.filter((p) => activeFolders.has(p.folder))
-    usePhotoNavigation(visiblePhotos, selected, setSelected)
 
     // Save the description written in the picture
     const saveDescription = async (description: string) => {
@@ -139,30 +147,35 @@ export default function JapanMap() {
             >
                 <NavigationControl position='bottom-right' />
 
-                {visiblePhotos.map((photo) => (
-                    <Marker
-                        key={`${photo.folder}-${photo.filename}`}
-                        longitude={photo.lng}
-                        latitude={photo.lat}
-                        anchor='bottom'
-                    >
-                        <div
-                            className={`w-3 h-3 rounded-full border-2 border-white cursor-pointer shadow-md transition-transform hover:scale-125 ${selected?.folder === photo.folder && selected?.filename === photo.filename
-                                ? 'bg-blue-600 scale-125'
-                                : 'bg-red-500'
-                                }`}
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setSelected(photo)
-                            }}
-                        />
-                    </Marker>
-                ))}
+                {visibleMedia.map((item) => {
+                    const isSelected = selected?.folder === item.folder && selected?.filename === item.filename
+                    const shape = item.kind === 'video' ? 'rounded-sm' : 'rounded-full'
+                    let color = item.kind === 'video' ? 'bg-violet-600' : 'bg-red-500'
+                    if (isSelected) color = 'bg-blue-600 scale-125'
+
+                    return (
+                        <Marker
+                            key={`${item.folder}-${item.filename}`}
+                            longitude={item.lng}
+                            latitude={item.lat}
+                            anchor='bottom'
+                        >
+                            <div
+                                className={`w-3 h-3 border-2 border-white cursor-pointer shadow-md
+                                            transition-transform hover:scale-125 ${shape} ${color}`}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelected(item)
+                                }}
+                            />
+                        </Marker>
+                    )
+                })}
             </Map>
 
             {selected && (
                 <PhotoPanel
-                    photo={selected}
+                    media={selected}
                     description={descriptions[`${selected.folder}/${selected.filename}`] ?? ''}
                     onClose={() => setSelected(null)}
                     onSaveDescription={saveDescription}

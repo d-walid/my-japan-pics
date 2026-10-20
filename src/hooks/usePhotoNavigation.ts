@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
-import type { Photo } from '@/types/photo'
+import type { Media } from '@/types/photo'
 
 
 export function usePhotoNavigation(
-    photos: Photo[],
-    selected: Photo | null,
-    onNavigate: (photo: Photo) => void
+    photos: Media[],
+    selected: Media | null,
+    onNavigate: (photo: Media) => void
 ) {
     const orderedPhotos = useMemo(() => {
         return [...photos].sort((a, b) => {
