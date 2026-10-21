@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { Photo } from '@/types/photo'
+import type { Media } from '@/types/photo'
 
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleString('fr-FR', {
@@ -14,13 +14,13 @@ function formatDate(iso: string): string {
 }
 
 interface PhotoPanelProps {
-    photo: Photo
+    media: Media
     description: string
     onClose: () => void
     onSaveDescription: (description: string) => void
 }
 
-export default function PhotoPanel({ photo, description, onClose, onSaveDescription }: PhotoPanelProps) {
+export default function PhotoPanel({ media, description, onClose, onSaveDescription }: PhotoPanelProps) {
     const [isEditingDesc, setIsEditingDesc] = useState(false)
     const [descDraft, setDescDraft] = useState('')
 
@@ -28,7 +28,7 @@ export default function PhotoPanel({ photo, description, onClose, onSaveDescript
     useEffect(() => {
         setIsEditingDesc(false)
         setDescDraft('')
-    }, [photo])
+    }, [media])
 
     const saveDescription = () => {
         onSaveDescription(descDraft)
@@ -71,20 +71,32 @@ export default function PhotoPanel({ photo, description, onClose, onSaveDescript
                 </button>
             </div>
             <div className='relative'>
-                <a
-                    href={`/api/original/${photo.folder}/${photo.filename}`}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                >
-                    <img
-                        src={photo.thumbPath}
-                        alt={photo.filename}
-                        className='max-h-[600px] cursor-zoom-in'
+                {media.kind === 'photo' ? (
+                    <a
+                        href={`/api/original/${media.folder}/${media.filename}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                    >
+                        <img
+                            src={media.thumbPath}
+                            alt={media.filename}
+                            className='max-h-[600px] cursor-zoom-in'
+                        />
+                    </a>
+                ) : (
+                    <video
+                        src={`/api/videos/${media.folder}/${media.filename}`}
+                        controls
+                        preload='metadata'
+                        className='max-h-[600px] max-w-full bg-black'
                     />
-                </a>
-                {photo.takenAt && (
-                    <span className='absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-0.5 rounded'>
-                        {formatDate(photo.takenAt)}
+                )}
+                {media.takenAt && (
+                    <span
+                        className={`absolute ${media.kind === 'video' ? 'bottom-12' : 'bottom-2'}
+                                    left-2 text-xs text-white bg-black/50 px-2 py-0.5 rounded`}
+                    >
+                        {formatDate(media.takenAt)}
                     </span>
                 )}
             </div>
