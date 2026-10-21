@@ -149,7 +149,7 @@ export default function JapanMap() {
 
                 {visibleMedia.map((item) => {
                     const isSelected = selected?.folder === item.folder && selected?.filename === item.filename
-                    const shape = item.kind === 'video' ? 'rounded-sm' : 'rounded-full'
+                    const shape = 'rounded-full'
                     let color = item.kind === 'video' ? 'bg-violet-600' : 'bg-red-500'
                     if (isSelected) color = 'bg-blue-600 scale-125'
 
