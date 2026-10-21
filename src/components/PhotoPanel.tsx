@@ -84,12 +84,18 @@ export default function PhotoPanel({ media, description, onClose, onSaveDescript
                         />
                     </a>
                 ) : (
-                    <div className='flex h-[300px] w-[500px] items-center justify-center bg-black text-sm text-white'>
-                        Video: {media.filename}
-                    </div>
+                    <video
+                        src={`/api/videos/${media.folder}/${media.filename}`}
+                        controls
+                        preload='metadata'
+                        className='max-h-[600px] max-w-full bg-black'
+                    />
                 )}
                 {media.takenAt && (
-                    <span className='absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-0.5 rounded'>
+                    <span
+                        className={`absolute ${media.kind === 'video' ? 'bottom-12' : 'bottom-2'}
+                                    left-2 text-xs text-white bg-black/50 px-2 py-0.5 rounded`}
+                    >
                         {formatDate(media.takenAt)}
                     </span>
                 )}
