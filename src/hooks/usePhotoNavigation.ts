@@ -27,6 +27,7 @@ export function usePhotoNavigation(
                 target instanceof HTMLElement &&
                 (target.tagName === 'INPUT' ||
                     target.tagName === 'TEXTAREA' ||
+                    target.tagName === 'VIDEO' ||
                     target.isContentEditable)
             ) return
 
