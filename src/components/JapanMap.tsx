@@ -149,7 +149,6 @@ export default function JapanMap() {
 
                 {visibleMedia.map((item) => {
                     const isSelected = selected?.folder === item.folder && selected?.filename === item.filename
-                    const shape = 'rounded-full'
                     let color = item.kind === 'video' ? 'bg-violet-600' : 'bg-red-500'
                     if (isSelected) color = 'bg-blue-600 scale-125'
 
@@ -162,7 +161,7 @@ export default function JapanMap() {
                         >
                             <div
                                 className={`w-3 h-3 border-2 border-white cursor-pointer shadow-md
-                                            transition-transform hover:scale-125 ${shape} ${color}`}
+                                            transition-transform hover:scale-125 rounded-full ${color}`}
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     setSelected(item)
